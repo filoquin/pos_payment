@@ -77,7 +77,7 @@ odoo.define('pos_mercado_pago.payment_qr', function (require) {
             var entropy = Math.floor(Math.random() * 100);
             line.external_reference = `${this.pos.pos_session.id}_${line.payment_method.id}_${entropy}`
             let base_url =  this.pos.base_url
-            // base_url = 'https://hormigag.ar'
+            base_url = 'https://hormigag.ar'
             var data = {
                 title: order.name,
                 notification_url: base_url + '/pos_mercado_pago/notification',

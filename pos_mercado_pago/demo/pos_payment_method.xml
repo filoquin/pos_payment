@@ -1,0 +1,11 @@
+<odoo noupdate="1">
+    <record id="mercadopago_qr" model="pos.payment.method">
+        <field name="name">Mercadopago QR</field>
+        <field name="journal_id" model="account.journal" eval="obj().env['account.journal'].search([('type', '=', 'bank')], limit=1).id"/>
+        <field name="use_payment_terminal">mercado_pago_qr</field>
+        <field name="mp_bearer_token">APP_USR-8679590302772901-072815-27f3c297abc53b6524f5c3832dbaa7de-1919546207</field>
+        <field name="mp_user_id">1919546207</field>
+        <field name="mp_store_id">62322445</field>
+        <field name="mp_pos_id">102758216</field>
+    </record>
+</odoo>

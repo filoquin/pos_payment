@@ -1,32 +1,31 @@
-odoo.define('pos_mercado_pago.models', function (require) {
-const { register_payment_method, Payment } = require('point_of_sale.models');
-const PaymentMercadoPago = require('pos_mercado_pago.payment');
-const PaymentMercadoPagoQR = require('pos_mercado_pago.payment_qr');
-const Registries = require('point_of_sale.Registries');
+odoo.define('pos_mercado_pago.models.models', function (require) {
+    var models = require('point_of_sale.models');
+    var PaymentMercadoPagoQR = require('pos_mercado_pago.payment_qr');
+    var PaymentMercadoPago = require('pos_mercado_pago.payment');
 
-register_payment_method('mercado_pago', PaymentMercadoPago);
-register_payment_method('mercado_pago_qr', PaymentMercadoPagoQR);
-const PosMercadoPagoPayment = (Payment) => class PosMercadoPagoPayment extends Payment {
-    constructor(obj, options) {
-        super(...arguments);
-        this.terminalServiceId = this.terminalServiceId || null;
-    }
-    //@override
-    export_as_JSON() {
-        const json = super.export_as_JSON(...arguments);
-        json.terminal_service_id = this.terminalServiceId;
-        return json;
-    }
-    //@override
-    init_from_JSON(json) {
-        super.init_from_JSON(...arguments);
-        this.terminalServiceId = json.terminal_service_id;
-    }
-    setTerminalServiceId(id) {
-        this.terminalServiceId = id;
-    }
-}
+    models.register_payment_method('mercado_pago', PaymentMercadoPago);
+    models.register_payment_method('mercado_pago_qr', PaymentMercadoPagoQR);
 
-Registries.Model.extend(Payment, PosMercadoPagoPayment);
-});
+    models.load_fields('pos.payment.method', 'mp_id_point_smart');
 
+    const superPaymentline = models.Paymentline.prototype;
+    models.Paymentline = models.Paymentline.extend({
+        initialize: function(attr, options) {
+            superPaymentline.initialize.call(this,attr,options);
+            this.terminalServiceId = this.terminalServiceId  || null;
+        },
+        export_as_JSON: function(){
+            const json = superPaymentline.export_as_JSON.call(this);
+            json.terminal_service_id = this.terminalServiceId;
+            return json;
+        },
+        init_from_JSON: function(json){
+            superPaymentline.init_from_JSON.apply(this,arguments);
+            this.terminalServiceId = json.terminal_service_id;
+        },
+        setTerminalServiceId: function(id) {
+            this.terminalServiceId = id;
+        }
+    });
+
+    });

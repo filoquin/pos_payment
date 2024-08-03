@@ -223,10 +223,21 @@ class PosPaymentMethod(models.Model):
             raise AccessError(_("Do not have access to fetch token from Mercado Pago"))
 
         method_sudo = self.sudo()
-        #fix infos
-        infos['total_amount'] = json_float_round(infos['total_amount'],2)
-        infos['items'][0]['total_amount'] = json_float_round(infos['total_amount'],2)
-        infos['items'][0]['unit_price'] = json_float_round(infos['total_amount'],2)
+        #sanitarized infos
+        total_amount_sanitarized = json_float_round(infos['total_amount'],2)
+        infos.update({
+            'total_amount': total_amount_sanitarized,
+            'items':[{
+                'sku_number': "0001",
+                'category': "general",
+                'title': "sale",
+                'description': "odoo sale",
+                'unit_price': total_amount_sanitarized,
+                'quantity': 1,
+                'unit_measure': "unit",
+                'total_amount': total_amount_sanitarized,
+            }]
+        })
 
         mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
         # Call Mercado Pago for payment intend creation
