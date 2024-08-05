@@ -74,8 +74,8 @@ odoo.define('pos_mercado_pago.payment_qr', function (require) {
             var order = this.pos.get_order();
             var config = this.pos.config;
             var line = order.selected_paymentline;
-            var entropy = Math.floor(Math.random() * 100);
-            line.external_reference = `${this.pos.pos_session.id}_${line.payment_method.id}_${entropy}`
+            var entropy = Date.now() + Math.random();
+            line.external_reference = `QR_${this.pos.pos_session.id}_${line.payment_method.id}_${line.cid}_${entropy}`
             let base_url =  this.pos.base_url
             base_url = 'https://hormigag.ar'
             var data = {
@@ -93,7 +93,7 @@ odoo.define('pos_mercado_pago.payment_qr', function (require) {
                     unit_measure: "unit",
                     total_amount: line.amount.toFixed,
                 }],
-                external_reference: `${this.pos.pos_session.id}_${line.payment_method.id}_${entropy}`,
+                external_reference: line.external_reference,
             };
             return data;
         },
@@ -178,7 +178,8 @@ odoo.define('pos_mercado_pago.payment_qr', function (require) {
                             order.set_tip(0);
                             line.set_amount(merchand_order['paid_amount']);
                             line.set_payment_status('done');
-                            line.transaction_id = merchand_order['id'];
+                            let payments = merchand_order['payments'].map((x) => x.id);
+                            line.transaction_id = merchand_order['id'] + ":" + payments;
                             clearTimeout(self.polling);
                             return Promise.resolve();
                         }
