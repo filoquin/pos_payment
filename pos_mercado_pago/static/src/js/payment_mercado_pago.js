@@ -74,7 +74,7 @@ odoo.define('pos_mercado_pago.payment', function (require) {
             var order = this.pos.get_order();
             var config = this.pos.config;
             var line = order.selected_paymentline;
-            var entropy = Math.floor(Math.random() * 100);
+            var entropy = Date.now() + Math.random();
             var data = {
                 amount: parseInt(line.amount * 100, 10),
                 additional_info: {
