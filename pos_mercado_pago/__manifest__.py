@@ -12,6 +12,7 @@
     'assets': {
         'point_of_sale.assets': [
             'pos_mercado_pago/static/src/js/*',
+            'pos_mercado_pago/static/src/xml/*',
         ],
     },
     'license': 'LGPL-3',

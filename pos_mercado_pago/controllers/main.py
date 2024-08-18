@@ -3,7 +3,7 @@ import hashlib
 import hmac
 import logging
 import re
-
+import json
 from odoo import http
 from odoo.http import request
 
@@ -39,7 +39,8 @@ class PosMercadoPagoWebhook(http.Controller):
             return http.Response(status=400)
 
         # Check for payload
-        data = request.httprequest.get_json(silent=True)
+        data = json.loads(request.httprequest.data)
+        
         if not data:
             _logger.debug('POST message received with no data')
             return http.Response(status=400)

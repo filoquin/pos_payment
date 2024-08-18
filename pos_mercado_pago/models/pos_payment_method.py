@@ -175,7 +175,7 @@ class PosPaymentMethod(models.Model):
                         'name': device.get('external_pos_id') or device.get('id'),
                         'mp_webhook_secret_key': self.mp_webhook_secret_key,
                         'mp_bearer_token': self.mp_bearer_token,
-                        'mp_id_point_smart': device.get('id').split('_')[-1] ,
+                        'mp_id_point_smart': device.get('id').split('_')[-1],
                         'mp_id_point_smart_complet': device.get('id'),
                     })
 
@@ -202,15 +202,15 @@ class PosPaymentMethod(models.Model):
             else:
                 raise UserError('El pos no tiene external_id')
         else:
-            body = {'external_id' : f"pos{self.id}",
+            body = {'external_id': f"pos{self.id}",
                     'external_store_id': self.mp_external_store_id,
                     'fixed_amount': True,
                     'name': self.name,
                     'store_id': self.mp_store_id,
             }
-            data = mercado_pago.call_mercado_pago("post", f"/pos" , body, self.mp_test_scope)
+            data = mercado_pago.call_mercado_pago("post", "/pos", body, self.mp_test_scope)
             self.write({
-                'mp_external_pos_id' : data['external_id'],
+                'mp_external_pos_id': data['external_id'],
                 'mp_pos_id': str(data['id']),
                 'mp_qr_url': data['qr']['template_document'],
             })
@@ -223,10 +223,10 @@ class PosPaymentMethod(models.Model):
             raise AccessError(_("Do not have access to fetch token from Mercado Pago"))
 
         method_sudo = self.sudo()
-        #fix infos
-        infos['total_amount'] = json_float_round(infos['total_amount'],2)
-        infos['items'][0]['total_amount'] = json_float_round(infos['total_amount'],2)
-        infos['items'][0]['unit_price'] = json_float_round(infos['total_amount'],2)
+        # fix infos
+        infos['total_amount'] = json_float_round(infos['total_amount'], 2)
+        infos['items'][0]['total_amount'] = json_float_round(infos['total_amount'], 2)
+        infos['items'][0]['unit_price'] = json_float_round(infos['total_amount'], 2)
 
         mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
         # Call Mercado Pago for payment intend creation
@@ -263,3 +263,28 @@ class PosPaymentMethod(models.Model):
         resp = mercado_pago.call_mercado_pago("delete", f"/instore/qr/seller/collectors/{method_sudo.mp_user_id}/pos/{self.mp_external_pos_id}/orders", infos, self.mp_test_scope)
         _logger.info("mp_payment_order_cancel(), response from Mercado Pago: %s", resp)
         return resp
+
+    def find_more_pos(self):
+        self.ensure_one()
+        mercado_pago = MercadoPagoPosRequest(self.mp_bearer_token)
+        data = mercado_pago.call_mercado_pago("get", "/pos", {}, self.mp_test_scope)
+        existing_qr = self.search([('mp_pos_id', '!=', False)]).mapped('mp_pos_id')
+        if 'results' in data:
+            for pos in data['results']:
+                if pos['id'] not in existing_qr and pos.get('external_id'):
+                    self.copy({
+                        'name': pos.get('name') or pos.get('id'),
+                        'mp_user_id': pos.get('user_id'),
+                        'mp_store_id': pos.get('store_id'),
+                        'mp_pos_id': str(pos.get('id')),
+                    })
+
+
+    def mp_unused_payment_get(self, payment_id):
+        """
+        Called from frontend to get the last payment intend from Mercado Pago
+        """
+        exist = self.env['pos.payment'].sudo().search([('transaction_id', 'ilike', '%%%s%%' % payment_id)])
+        if exist:
+            return {'status': 'used', 'message': 'El pago %s ya fue utilizado en otra venta. No puede reutilizar' % payment_id}
+        return self.mp_payment_get(payment_id)

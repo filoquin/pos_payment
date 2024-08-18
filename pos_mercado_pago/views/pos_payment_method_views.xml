@@ -19,6 +19,7 @@
                 <field name="mp_pos_id" attrs="{'invisible': [('use_payment_terminal', '!=', 'mercado_pago_qr')]}"/>
                 <field name="mp_qr_url" attrs="{'invisible': [('use_payment_terminal', '!=', 'mercado_pago_qr')]}" widget="url" readonly="True"/>
                 <button string="Set QR" attrs="{'invisible': [('use_payment_terminal', '!=', 'mercado_pago_qr')]}" type="object" name="set_qr_info" groups="base.group_no_one"/>
+                <button string="Find more qrs" attrs="{'invisible': [('use_payment_terminal', '!=', 'mercado_pago_qr')]}" type="object" name="find_more_pos" groups="base.group_no_one" class="oe_highlight"/>
             </xpath>
         </field>
     </record>

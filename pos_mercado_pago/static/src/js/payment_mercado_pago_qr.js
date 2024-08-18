@@ -22,7 +22,23 @@ odoo.define('pos_mercado_pago.payment_qr', function (require) {
         close: function () {
             this._super.apply(this, arguments);
         },
+        async _checkPaymentRequest(line) {
+            console.log('manual check line');
+            clearTimeout(this.polling);
+            var line = this.pending_mercado_pago_qr_line();
+            if (line.external_reference){
 
+                var res = new Promise(function (resolve, reject) {
+                    // clear previous intervals just in case, otherwise
+                    // it'll run forever
+                    clearTimeout(self.polling);
+                    self._poll_for_response(resolve, reject);
+
+                });
+
+            }    
+            await Gui.showPopup("MercadoPagoManualPopup", {name: 'Mercado pago Manual', line: line, paymentTimeWindow:15 });
+        },
         // set_most_recent_service_id(id) {
         //     this.most_recent_service_id = id;
         // },
@@ -58,9 +74,9 @@ odoo.define('pos_mercado_pago.payment_qr', function (require) {
                 args: [[this.payment_method.id], info],
             }, {
                 // When a payment terminal is disconnected it takes Adyen
-                // a while to return an error (~6s). So wait 10 seconds
+                // a while to return an error (~6s). So wait 20 seconds
                 // before concluding Odoo is unreachable.
-                timeout: 10000,
+                timeout: 20000,
                 shadow: true,
             }).catch(this._handle_odoo_connection_failure.bind(this));
         },
@@ -90,7 +106,7 @@ odoo.define('pos_mercado_pago.payment_qr', function (require) {
                     unit_price: line.amount,
                     quantity: 1,
                     unit_measure: "unit",
-                    total_amount: line.amount.toFixed,
+                    total_amount: line.amount,
                 }],
                 external_reference: line.external_reference,
             };

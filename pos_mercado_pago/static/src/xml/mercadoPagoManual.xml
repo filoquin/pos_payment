@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="MercadoPagoManualPopup" owl="1">
+        <div role="dialog" class="modal-dialog">
+            <div class="popup popup-text mercado-pago-manual">
+                <header class="title" t-esc="props.name" />
+                <main>
+                  <div class="form-group">
+                    <input type="text" class="form-control" t-model="state.paymentId" placeholder="Codigo de pago"/>
+                  </div>
+                </main>
+                <footer class="footer">
+                    <div class="button cancehighlightl" t-on-click="getPaymentById">
+                        Find payment
+                    </div>
+                    <div class="button cancel" t-on-click="cancel">
+                        Cancel
+                    </div>
+                </footer>
+            </div>
+        </div>
+    </t>
+
+</templates>

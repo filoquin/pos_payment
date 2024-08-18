@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="PaymentScreenPaymentLines" t-inherit="point_of_sale.PaymentScreenPaymentLines" owl="1">
+        <xpath expr="//div[hasclass('electronic_payment')]/t[4]/div" position="after">
+            <div t-if="line.payment_method.use_payment_terminal == 'mercado_pago_qr'" style="flex-grow: 1;text-align: center;padding: 1rem;" class="button check_payment_request" title="Check Payment Request" t-on-click="() => this.trigger('manual_payment-request', line)">
+              <i class="fa fa-binoculars p-3" aria-hidden="true"></i>
+            </div>
+        </xpath>
+    </t>
+</templates>
