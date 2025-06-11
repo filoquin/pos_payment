@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.form.inherit.account.payment</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <block id="pos_payment_section" position="inside">                            
+                <setting id="product_surcharge_id" title="This product is used as reference on customer receipts." string="Tips" help="Accept customer tips or convert their change to a tip" documentation="/applications/sales/point_of_sale/restaurant/tips.html">
+                    <div class="content-group">
+                        <div class="row mt16" id="dev_product_surcharge_id">
+                            <label string="Select a product that will be used when applying a financing plan in payments." for="product_surcharge_id" class="col-lg-3 o_light_label "/>
+                            <field name="product_surcharge_id" domain="[('available_in_pos', '=', True)]"/>
+                        </div>
+                    </div>
+                </setting>
+            </block>
+        </field>
+    </record>
+</odoo>
