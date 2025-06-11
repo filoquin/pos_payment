@@ -29,7 +29,6 @@ export class FinancialSurcharge extends PaymentInterface {
                 }),
             })
         }
-        debugger;
         return res;
     }
     async send_payment_request(cid) {
@@ -38,14 +37,15 @@ export class FinancialSurcharge extends PaymentInterface {
         try {
             // During payment creation, user can't cancel the payment intent
             line.set_payment_status("waitingCapture");
+            // Call Mercado Pago to create a payment intent
             return await ask(
                 this.env.services.dialog,
                 {
-                    title: 'Select payment intallment ',
+                    title: 'Select paym',
                     line: line,
                     cards: await this._get_cards(),
-                    order: line.pos_order_id,
-                    pos: this.pos,
+                    order: this.pos.get_order(),
+                    pos: this.pos, 
                 },
                 {},
                 FinancialSurchargePopup
