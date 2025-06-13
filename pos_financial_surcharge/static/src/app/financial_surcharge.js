@@ -34,6 +34,13 @@ export class FinancialSurcharge extends PaymentInterface {
     async send_payment_request(cid) {
         await super.send_payment_request(...arguments);
         const line = this.pos.get_order().get_selected_paymentline();
+
+        // Validar que haya monto ingresado
+    const amount = line.amount;
+    if (!amount || amount <= 0) {
+        this._showMsg("Debe ingresar un monto antes de seleccionar este método de pago.", "Monto no válido");
+        return false;
+    }
         try {
             // During payment creation, user can't cancel the payment intent
             line.set_payment_status("waitingCapture");

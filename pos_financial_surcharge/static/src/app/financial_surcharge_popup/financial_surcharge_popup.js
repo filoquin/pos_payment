@@ -13,10 +13,15 @@ export class FinancialSurchargePopup extends ConfirmationDialog {
     };
 
     async _confirm() {
-        const instalments = this.props.line.models['account.card.installment'].getAllBy('id');
         const selected_id = this.state.selected_installment;
-        const installment = instalments[selected_id];
 
+        if (!selected_id) {
+            alert("Debe seleccionar un plan de cuotas.");
+            return;
+        }
+
+        const instalments = this.props.line.models['account.card.installment'].getAllBy('id');
+        const installment = instalments[selected_id];
 
         if (!installment) {
             console.warn("⚠️ Plan de cuotas no encontrado.");
@@ -31,6 +36,12 @@ export class FinancialSurchargePopup extends ConfirmationDialog {
         this.props.line.amount = total_with_surcharge;
 
         const pos_payment_method = this.props.line.payment_method_id?.raw;
+        const order = this.props.pos.get_order();
+
+        const card_name = installment.card_id?.name || "Tarjeta desconocida";
+        const installment_name = installment.name;
+        
+        const customer_note = `Tarjeta: ${card_name}\nCuotas: ${installment_name}`;
 
         if (surcharge_coefficient > 1.0 && diff_amount > 0.0) {
             if (pos_payment_method && pos_payment_method.bank_charge_prod_id) {
@@ -41,30 +52,25 @@ export class FinancialSurchargePopup extends ConfirmationDialog {
                         product.taxes_id = [tax.id];
                     }
 
-                    console.log("🔍 PRODUCTO CARGADO:");
-                    console.log("ID:", product.id);
-                    console.log("Nombre:", product.display_name);
-                    console.log("Taxes ID:", product.taxes_id);
-                    console.log("Tipo:", product.type);
-
                     this.props.pos.addLineToCurrentOrder({
                         product_id: product,
                         price_unit: parseFloat(diff_amount.toFixed(2)),
                     }, {});
-
-                    const order = this.props.pos.get_order();
-                    const orderLines = order.get_orderlines();
-                    const lastLine = orderLines[orderLines.length - 1];
-
-                    const card_name = installment.card_id?.name || "Tarjeta desconocida";
-                    const installment_name = installment.name;
-                    lastLine.set_customer_note(`Tarjeta: ${card_name} | Cuotas: ${installment_name}`);
                 } else {
                     console.warn("⚠️ Producto de recargo no encontrado.");
                 }
             } else {
                 console.warn("⚠️ No se encontró el método de pago o el producto.");
             }
+        }
+
+        // Siempre guardar nota, incluso sin recargo
+        const orderlines = order.get_orderlines();
+        const line_to_note = orderlines.at(-1);
+        if (line_to_note) {
+            line_to_note.set_customer_note(customer_note);
+        } else {
+            console.warn("⚠️ No hay líneas de pedido para asignar la nota.");
         }
 
         console.log("💳 Nuevo monto del pago:", this.props.line.amount);
@@ -92,6 +98,9 @@ export class FinancialSurchargePopup extends ConfirmationDialog {
         this.amount = this.env.utils.formatCurrency(this.props.line.amount);
         this.raw_amount = this.props.line.amount;
         this.cards = this.props.cards;
-        this.state = useState({ raw_amount: this.props.line.amount });
+        this.state = useState({
+            raw_amount: this.props.line.amount,
+            selected_installment: "",
+        });
     }
 }
