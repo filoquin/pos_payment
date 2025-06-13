@@ -2,10 +2,12 @@
     'name': 'Pos Financial Surchage',
     'version': "18.0.1.0.0",
     'category': 'Sales/Point of Sale',
+    'developer': 'Martín Quinteros(Filoquin) , Francisco Sulé',
     'sequence': 6,
     'summary': 'Add pos finanacial surcharge',
     'data': [
         'views/card_installment_view.xml',
+        'views/financial_surcharge_payment_method_view.xml',
     ],
     'depends': ['point_of_sale', 'card_installment'],
     'installable': True,

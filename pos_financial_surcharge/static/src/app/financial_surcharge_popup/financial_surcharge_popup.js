@@ -11,22 +11,75 @@ export class FinancialSurchargePopup extends ConfirmationDialog {
         cards: Object,
         pos: Object,
     };
-    async _confirm() {
-        debugger;
-        const instalments = this.props.line.models['account.card.installment'].getAllBy('id')
-        this.props.line.amount=this.state.raw_amount * instalments[this.state.selected_installment].surcharge_coefficient;
-        const diff_amount = this.state.raw_amount - this.props.line.amount
-        debugger;
-        await this.props.pos.addLineToCurrentOrder({
-                product_id: 26,// filo crea un data que te cree un producto recargo haber como lo podes relacionar
-                qty: 1,
-                price: diff_amount,
-                note: instalments[this.state.selected_installment].name,
-            });
 
+    async _confirm() {
+        const selected_id = this.state.selected_installment;
+
+        if (!selected_id) {
+            alert("Debe seleccionar un plan de cuotas.");
+            return;
+        }
+
+        const instalments = this.props.line.models['account.card.installment'].getAllBy('id');
+        const installment = instalments[selected_id];
+
+        if (!installment) {
+            console.warn("⚠️ Plan de cuotas no encontrado.");
+            return this.execButton(this.props.confirm);
+        }
+
+        const surcharge_coefficient = installment.surcharge_coefficient || 1.0;
+        const raw_amount = this.state.raw_amount;
+        const total_with_surcharge = raw_amount * surcharge_coefficient;
+        const diff_amount = total_with_surcharge - raw_amount;
+
+        this.props.line.amount = total_with_surcharge;
+
+        const pos_payment_method = this.props.line.payment_method_id?.raw;
+        const order = this.props.pos.get_order();
+
+        const card_name = installment.card_id?.name || "Tarjeta desconocida";
+        const installment_name = installment.name;
+        
+        const customer_note = `Tarjeta: ${card_name}\nCuotas: ${installment_name}`;
+
+        if (surcharge_coefficient > 1.0 && diff_amount > 0.0) {
+            if (pos_payment_method && pos_payment_method.bank_charge_prod_id) {
+                const product = this.props.pos.models['product.product'].getBy('id', pos_payment_method.bank_charge_prod_id);
+                if (product) {
+                    const tax = this.props.pos.models['account.tax'].getBy('id', 1);
+                    if (tax && (!product.taxes_id || product.taxes_id.length === 0)) {
+                        product.taxes_id = [tax.id];
+                    }
+
+                    this.props.pos.addLineToCurrentOrder({
+                        product_id: product,
+                        price_unit: parseFloat(diff_amount.toFixed(2)),
+                    }, {});
+                } else {
+                    console.warn("⚠️ Producto de recargo no encontrado.");
+                }
+            } else {
+                console.warn("⚠️ No se encontró el método de pago o el producto.");
+            }
+        }
+
+        // Siempre guardar nota, incluso sin recargo
+        const orderlines = order.get_orderlines();
+        const line_to_note = orderlines.at(-1);
+        if (line_to_note) {
+            line_to_note.set_customer_note(customer_note);
+        } else {
+            console.warn("⚠️ No hay líneas de pedido para asignar la nota.");
+        }
+
+        console.log("💳 Nuevo monto del pago:", this.props.line.amount);
         this.props.line.set_payment_status("done");
         return this.execButton(this.props.confirm);
     }
+
+
+
 
     static defaultProps = {
         ...ConfirmationDialog.defaultProps,
@@ -34,15 +87,20 @@ export class FinancialSurchargePopup extends ConfirmationDialog {
         cancelLabel: _t("Cancel Payment"),
         title: _t("Card register"),
     };
+
     formatCurrency(amount) {
         return this.env.utils.formatCurrency(amount);
     }
+
     setup() {
         super.setup();
         this.props.body = _t(" %s", this.props.title);
         this.amount = this.env.utils.formatCurrency(this.props.line.amount);
         this.raw_amount = this.props.line.amount;
         this.cards = this.props.cards;
-        this.state = useState({raw_amount : this.props.line.amount});
+        this.state = useState({
+            raw_amount: this.props.line.amount,
+            selected_installment: "",
+        });
     }
 }
