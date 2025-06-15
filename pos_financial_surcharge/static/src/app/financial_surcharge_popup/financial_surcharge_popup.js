@@ -1,5 +1,6 @@
 import { useState } from "@odoo/owl";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { ConfirmationDialog, AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { compute_price_force_price_include } from "@point_of_sale/app/models/utils/tax_utils";
 import { _t } from "@web/core/l10n/translation";
 
 export class FinancialSurchargePopup extends ConfirmationDialog {
@@ -12,74 +13,77 @@ export class FinancialSurchargePopup extends ConfirmationDialog {
         pos: Object,
     };
 
-    async _confirm() {
-        const selected_id = this.state.selected_installment;
-
-        if (!selected_id) {
-            alert("Debe seleccionar un plan de cuotas.");
-            return;
-        }
-
-        const instalments = this.props.line.models['account.card.installment'].getAllBy('id');
-        const installment = instalments[selected_id];
-
-        if (!installment) {
-            console.warn("⚠️ Plan de cuotas no encontrado.");
-            return this.execButton(this.props.confirm);
-        }
-
-        const surcharge_coefficient = installment.surcharge_coefficient || 1.0;
-        const raw_amount = this.state.raw_amount;
-        const total_with_surcharge = raw_amount * surcharge_coefficient;
-        const diff_amount = total_with_surcharge - raw_amount;
-
-        this.props.line.amount = total_with_surcharge;
-
-        const pos_payment_method = this.props.line.payment_method_id?.raw;
-        const order = this.props.pos.get_order();
-
+    // Función para crear la nota del cliente
+    _createCustomerNote(installment) {
         const card_name = installment.card_id?.name || "Tarjeta desconocida";
         const installment_name = installment.name;
         
-        const customer_note = `Tarjeta: ${card_name}\nCuotas: ${installment_name}`;
+        return `Tarjeta: ${card_name}\nCuotas: ${installment_name}`;
+    }
 
-        if (surcharge_coefficient > 1.0 && diff_amount > 0.0) {
-            if (pos_payment_method && pos_payment_method.bank_charge_prod_id) {
-                const product = this.props.pos.models['product.product'].getBy('id', pos_payment_method.bank_charge_prod_id);
-                if (product) {
-                    const tax = this.props.pos.models['account.tax'].getBy('id', 1);
-                    if (tax && (!product.taxes_id || product.taxes_id.length === 0)) {
-                        product.taxes_id = [tax.id];
-                    }
-
-                    this.props.pos.addLineToCurrentOrder({
-                        product_id: product,
-                        price_unit: parseFloat(diff_amount.toFixed(2)),
-                    }, {});
-                } else {
-                    console.warn("⚠️ Producto de recargo no encontrado.");
-                }
-            } else {
-                console.warn("⚠️ No se encontró el método de pago o el producto.");
-            }
+    async _confirm() {
+        if (!this.state.selected_installment) {
+            this._showMsg(_t("You must select an installment"), _t("Error"));
+            return false;
         }
 
-        // Siempre guardar nota, incluso sin recargo
-        const orderlines = order.get_orderlines();
-        const line_to_note = orderlines.at(-1);
-        if (line_to_note) {
-            line_to_note.set_customer_note(customer_note);
-        } else {
-            console.warn("⚠️ No hay líneas de pedido para asignar la nota.");
+        const instalments = this.props.line.models['account.card.installment'].getAllBy('id');
+        const surcharge_coefficient = instalments[this.state.selected_installment].surcharge_coefficient;
+        const diff_amount = (this.state.raw_amount * surcharge_coefficient) - this.state.raw_amount;
+
+        // Si no hay diferencia (es decir, no aplica recargo), finalizar el proceso y agregar la nota
+        if (!diff_amount) {
+            this.props.line.set_payment_status("done");
+            await this._addNoteToLastLine();  // Asegurarse de agregar la nota al último producto
+            return this.execButton(this.props.confirm);
         }
 
-        console.log("💳 Nuevo monto del pago:", this.props.line.amount);
+        const product_surcharge_id = this.props.pos.company.product_surcharge_id;
+        const new_price = compute_price_force_price_include(
+            product_surcharge_id.taxes_id,
+            diff_amount,
+            product_surcharge_id,
+            this.props.pos.config._product_default_values,
+            this.props.pos.company,
+            this.props.pos.currency,
+            this.props.pos.models
+        );
+
+        const new_line = await this.props.pos.addLineToCurrentOrder({
+            product_id: this.props.pos.company.product_surcharge_id.id,
+            qty: 1,
+            price_unit: new_price,
+            note: instalments[this.state.selected_installment].name,
+        });
+
+        // Actualizamos el monto de la línea
+        this.props.line.amount = this.state.raw_amount + new_line.price_subtotal_incl;
         this.props.line.set_payment_status("done");
+
+        // Agregamos la nota al último producto de la orden
+        await this._addNoteToLastLine();  // Asegurarse de agregar la nota al último producto
+
         return this.execButton(this.props.confirm);
     }
 
+    // Función para agregar la nota al último producto de la orden
+    async _addNoteToLastLine() {
+        // Obtenemos todas las líneas de la orden
+        const orderlines = this.props.order.get_orderlines();
+        const last_line = orderlines.at(-1);  // Accedemos a la última línea de la orden
 
+        if (last_line) {
+            const instalments = this.props.line.models['account.card.installment'].getAllBy('id');
+            const installment = instalments[this.state.selected_installment];
 
+            // Creamos la nota del cliente
+            const customer_note = this._createCustomerNote(installment);
+
+            // Asignamos la nota al último producto de la orden
+            last_line.set_customer_note(customer_note);
+
+        }
+    }
 
     static defaultProps = {
         ...ConfirmationDialog.defaultProps,
@@ -101,6 +105,14 @@ export class FinancialSurchargePopup extends ConfirmationDialog {
         this.state = useState({
             raw_amount: this.props.line.amount,
             selected_installment: "",
+            
+        });
+    }
+
+    _showMsg(msg, title) {
+        this.env.services.dialog.add(AlertDialog, {
+            title: "Error " + title,
+            body: msg,
         });
     }
 }

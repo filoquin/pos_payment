@@ -12,8 +12,8 @@ class AccountCard(models.Model):
 
     @api.model
     def _load_pos_data_domain(self, data):
-        return []
-        # return self.env['account.card']._check_company_domain(data['pos.config']['data'][0]['company_id']) + [('available_in_pos', '=', True)]
+        return self.env['account.card']._check_company_domain(data['pos.config']['data'][0]['company_id']) 
+        #+ [('available_in_pos', '=', True)]
 
     @api.model
     def _load_pos_data_fields(self, config_id):

@@ -6,8 +6,7 @@
             <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
             <field name="arch" type="xml">
                 <field name="company_id" position="after">
-                    <field name="bank_charge_prod_id" options="{'no_create': True}" 
-                           />
+                    <field name="available_card_ids" widget="many2many_tags" options="{'no_create': True}" />
                 </field>
             </field>
         </record>

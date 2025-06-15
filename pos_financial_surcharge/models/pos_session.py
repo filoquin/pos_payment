@@ -7,4 +7,4 @@ class PosSession(models.Model):
 
     @api.model
     def _load_pos_data_models(self, config_id):
-        return super()._load_pos_data_models(config_id) + ['account.card', 'account.card.installment','product.product','account.tax',]
+        return super()._load_pos_data_models(config_id) + ['account.card', 'account.card.installment']

@@ -11,7 +11,11 @@ export class FinancialSurcharge extends PaymentInterface {
     async _get_cards(){
        const res = []
        const installment_ids = this.pos.models['account.card.installment'].getAll()
-       for (const card of this.pos.models['account.card'].getAll()) {
+       const available_card_ids = this.payment_method_id.available_card_ids.map((card)=> card.id);
+       for (const card of this.pos.models['account.card'].getAll().filter((card) =>{
+            return available_card_ids.includes(card.id);
+       })
+    ) {
             res.push({
                 id: card.id,
                 name: card.name,
@@ -34,25 +38,17 @@ export class FinancialSurcharge extends PaymentInterface {
     async send_payment_request(cid) {
         await super.send_payment_request(...arguments);
         const line = this.pos.get_order().get_selected_paymentline();
-
-        // Validar que haya monto ingresado
-    const amount = line.amount;
-    if (!amount || amount <= 0) {
-        this._showMsg("Debe ingresar un monto antes de seleccionar este método de pago.", "Monto no válido");
-        return false;
-    }
         try {
             // During payment creation, user can't cancel the payment intent
             line.set_payment_status("waitingCapture");
-            // Call Mercado Pago to create a payment intent
             return await ask(
                 this.env.services.dialog,
                 {
-                    title: 'Select paym',
+                    title: 'Select payment intallment ',
                     line: line,
                     cards: await this._get_cards(),
-                    order: this.pos.get_order(),
-                    pos: this.pos, 
+                    order: line.pos_order_id,
+                    pos: this.pos,
                 },
                 {},
                 FinancialSurchargePopup

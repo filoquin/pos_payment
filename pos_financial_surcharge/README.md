@@ -52,7 +52,6 @@ Este módulo permite aplicar recargos financieros personalizados según el plan 
 2. El usuario debe seleccionar:
     - Tarjeta
     - Plan de cuotas
-    - Ingresar lote y cupón (si aplica)
 3. Se calcula el total ajustado y se agrega una línea de recargo si corresponde.
 4. Se guarda una nota de cliente con los datos de la operación.
 
